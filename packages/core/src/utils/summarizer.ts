@@ -84,10 +84,13 @@ export async function summarizeToolOutput(
   if (!textToSummarize || textToSummarize.length < maxOutputTokens) {
     return textToSummarize;
   }
+  // The payload is model/tool output, so it goes in through a function
+  // replacer: passing it as a replacement string would let JavaScript expand
+  // `$&`, `$'`, `` $` `` and `$$` found in the text and corrupt the prompt.
   const prompt = SUMMARIZE_TOOL_OUTPUT_PROMPT.replace(
     '{maxOutputTokens}',
     String(maxOutputTokens),
-  ).replace('{textToSummarize}', textToSummarize);
+  ).replace('{textToSummarize}', () => textToSummarize);
 
   const contents: Content[] = [{ role: 'user', parts: [{ text: prompt }] }];
   try {

@@ -165,11 +165,18 @@ export async function FixLLMEditWithInstruction(
   if (cachedResult) {
     return cachedResult;
   }
-  const userPrompt = EDIT_USER_PROMPT.replace('{instruction}', instruction)
-    .replace('{old_string}', old_string)
-    .replace('{new_string}', new_string)
-    .replace('{error}', error)
-    .replace('{current_content}', current_content);
+  // Every value here comes from the model or the file being edited. They go in
+  // through function replacers: as replacement strings, any `$&`, `$'`,
+  // `` $` `` or `$$` inside them would be expanded by JavaScript and corrupt
+  // the prompt.
+  const userPrompt = EDIT_USER_PROMPT.replace(
+    '{instruction}',
+    () => instruction,
+  )
+    .replace('{old_string}', () => old_string)
+    .replace('{new_string}', () => new_string)
+    .replace('{error}', () => error)
+    .replace('{current_content}', () => current_content);
 
   const contents: Content[] = [
     {

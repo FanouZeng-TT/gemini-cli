@@ -184,6 +184,30 @@ Return the summary string which should first contain an overall summarization of
       const contents = calledWith[1];
       expect(contents[0].parts[0].text).toBe(expectedPrompt);
     });
+
+    it('should not expand $ replacement patterns in the summarized text', async () => {
+      const longText =
+        "echo $'newline' && printf $$ and $& and $` and ${HOME}" +
+        'x'.repeat(2000);
+      (mockGeminiClient.generateContent as Mock).mockResolvedValue({
+        candidates: [{ content: { parts: [{ text: 'This is a summary.' }] } }],
+      });
+
+      await summarizeToolOutput(
+        mockConfigInstance,
+        { model: 'gemini-pro-limited' },
+        longText,
+        mockGeminiClient,
+        abortSignal,
+      );
+
+      const contents = (mockGeminiClient.generateContent as Mock).mock
+        .calls[0][1];
+      const promptText = contents[0].parts[0].text;
+      // `$&`, `$'`, `$$` … in a string replacement are expanded by JavaScript
+      // and would corrupt the prompt, so the text must survive verbatim.
+      expect(promptText).toContain(`"${longText}"`);
+    });
   });
 
   describe('llmSummarizer', () => {

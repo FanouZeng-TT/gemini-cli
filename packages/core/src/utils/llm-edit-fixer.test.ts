@@ -156,6 +156,32 @@ describe('FixLLMEditWithInstruction', () => {
     );
   });
 
+  it('should not expand $ replacement patterns in the edit payload', async () => {
+    mockGenerateJson.mockResolvedValue(mockApiResponse);
+    const dollarOld = "const msg = $'quoted';";
+    const dollarNew = 'printf $$ and $& and $` done';
+
+    await promptIdContext.run('test-prompt-id-dollar-patterns', async () => {
+      await FixLLMEditWithInstruction(
+        'Fix the quoting',
+        dollarOld,
+        dollarNew,
+        'String not found',
+        'const msg = 1;',
+        mockBaseLlmClient,
+        abortSignal,
+      );
+    });
+
+    const generateJsonCall = mockGenerateJson.mock.calls[0][0];
+    const userPromptContent = generateJsonCall.contents[0].parts[0].text;
+
+    // `$&`, `$'`, `$$` … in a string replacement are expanded by JavaScript
+    // and would corrupt the prompt, so the payload must survive verbatim.
+    expect(userPromptContent).toContain(`<search>\n${dollarOld}\n</search>`);
+    expect(userPromptContent).toContain(`<replace>\n${dollarNew}\n</replace>`);
+  });
+
   it('should return a cached result on subsequent identical calls', async () => {
     mockGenerateJson.mockResolvedValue(mockApiResponse);
     const testPromptId = 'test-prompt-id-caching';

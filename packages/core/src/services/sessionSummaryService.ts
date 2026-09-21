@@ -104,7 +104,13 @@ export class SessionSummaryService {
         })
         .join('\n\n');
 
-      const prompt = SUMMARY_PROMPT.replace('{conversation}', conversationText);
+      // The conversation text goes in through a function replacer: as a
+      // replacement string, any `$&`, `$'`, `` $` `` or `$$` inside it would
+      // be expanded by JavaScript and corrupt the prompt.
+      const prompt = SUMMARY_PROMPT.replace(
+        '{conversation}',
+        () => conversationText,
+      );
 
       // Create abort controller with timeout
       const abortController = new AbortController();

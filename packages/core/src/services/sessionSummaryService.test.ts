@@ -85,6 +85,33 @@ describe('SessionSummaryService', () => {
       );
     });
 
+    it('should not expand $ replacement patterns in the conversation text', async () => {
+      const messages: MessageRecord[] = [
+        {
+          id: '1',
+          timestamp: '2025-12-03T00:00:00Z',
+          type: 'user',
+          content: [{ text: "run echo $'newline' and printf $$ and $&" }],
+        },
+        {
+          id: '2',
+          timestamp: '2025-12-03T00:01:00Z',
+          type: 'gemini',
+          content: [{ text: 'That prints a newline.' }],
+        },
+      ];
+
+      await service.generateSummary({ messages });
+
+      const callArgs = mockGenerateContent.mock.calls[0][0];
+      const promptText = callArgs.contents[0].parts[0].text;
+      // `$&`, `$'`, `$$` … in a string replacement are expanded by JavaScript
+      // and would corrupt the prompt, so the text must survive verbatim.
+      expect(promptText).toContain(
+        "User: run echo $'newline' and printf $$ and $&",
+      );
+    });
+
     it('should return null for empty messages array', async () => {
       const summary = await service.generateSummary({ messages: [] });
 
